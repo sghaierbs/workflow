@@ -1,0 +1,15 @@
+/*.validation_path{
+	height: 12px;
+}
+
+.validation_path button{
+	text-size: 10px;
+}*/
+
+.done-state {
+	color: green !important;
+}
+
+.pending-state {
+	color: red !important;
+}

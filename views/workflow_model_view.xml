@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <data>
+
+        <record id="transition_manager_from_view" model="ir.ui.view">
+            <field name="name">transition.manager.form</field>
+            <field name="model">transition.manager</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name='validation_state_ids'/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="transition_manager_action" model="ir.actions.act_window">
+            <field name="name">Transition Manager</field>
+            <field name="res_model">transition.manager</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+    
+        
+
+        <record id="workflow_model_from_view" model="ir.ui.view">
+            <field name="name">workflow.model.form</field>
+            <field name="model">workflow.model</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name='name'/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="workflow_model_action" model="ir.actions.act_window">
+            <field name="name">Workflow Model</field>
+            <field name="res_model">workflow.model</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+
+        <menuitem name="Workflow" 
+            id="workflow_main_menu"  
+            parent="base.menu_administration" 
+            sequence="-1"/>
+
+
+        <menuitem name="Workflow Model" 
+            id="workflow_model_menu" 
+            action="workflow_model_action" 
+            parent="workflow.workflow_main_menu" 
+            sequence="-1"/>
+
+        <menuitem name="Transition Manager" 
+            id="workflow_model_menu" 
+            action="transition_manager_action" 
+            parent="workflow.workflow_main_menu" 
+            sequence="-1"/>
+
+        
+
+    </data>
+</odoo>

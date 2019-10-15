@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<odoo>
+    <data>
+
+        <record id="workflow_from_view" model="ir.ui.view">
+            <field name="name">workflow.workflow.form</field>
+            <field name="model">workflow.workflow</field>
+            <field name="arch" type="xml">
+                <form>
+                    <header>
+                        <button name="btn_reload_workflow"
+                                string="Update" type="object"
+                                class="oe_highlight" icon="fa-refresh"/>
+                    </header>
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name='name'/>
+                                <field name='model_id'/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="States">
+                                <field name="state_ids"  context="{'default_workflow_id':id}" >
+                                    <tree>
+                                        <field name='name'/>
+                                        <field name='technical_name'/>
+                                    </tree>
+                                </field>
+                            </page>
+                            <page string="Actions">
+                                <field name="action_ids"  context="{'default_workflow_id':id}">
+                                    <tree>
+                                        <field name='name'/>
+                                        <field name='type'/>
+                                        <field name='description'/>
+                                    </tree>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_diagram_workflow" model="ir.ui.view">
+            <field name="name">workflow.workflow.diagram</field>
+            <field name="model">workflow.workflow</field>
+            <field name="arch" type="xml">
+                <diagram string="Workflow Editor"> 
+                    <node object="workflow.state"
+                          bgcolor="gray:flow_start==True;grey:flow_end==True" >
+                        <field name="name" required="1"/>
+                        <field name="is_visible"/>
+                        <field name="flow_start"/>
+                        <field name="flow_end"/>
+                    </node>
+                    <arrow object="workflow.transition"
+                           source="state_from"
+                           destination="state_to"
+                           label="['name']">
+                        <field name="name"/>
+                        <field name="state_from" required="1"/>
+                        <field name="state_to" required="1"/>
+                    </arrow>
+                    <label string="Dynamic Workflow Designer."/>
+                    <label string="Notes: You can only have one start node and multiple end nodes."/>
+                </diagram>
+            </field>
+        </record>
+
+
+        <record id="workflow_state_from_view" model="ir.ui.view">
+            <field name="name">workflow.state.form</field>
+            <field name="model">workflow.state</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name='name'/>
+                                <field name='technical_name' readonly='1'/>
+                                <field name='workflow_id' invisible='1'/>
+                            </group>
+                            <group>
+                                <field name='flow_start'/>
+                                <field name='flow_end'/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Out Transitions">
+                                <field name="out_transition_ids" context="{'default_state_from':id,'default_workflow_id':workflow_id}">
+                                    <tree>
+                                        <field name='name'/>
+                                    </tree>
+                                </field>
+                            </page>
+                            <page string="in Transitions">
+                                <field name="in_transition_ids" >
+                                    <tree>
+                                        <field name='name'/>
+                                    </tree>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="workflow_transition_from_view" model="ir.ui.view">
+            <field name="name">workflow.transition.form</field>
+            <field name="model">workflow.transition</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name='action_id' string='Action to trigger'/>
+                                <field name='name'/>
+                                <field name='workflow_id' invisible='1'/>
+                            </group>
+                            <group>
+                                <field name='state_from' readonly='0'/>
+                                <field name='state_to' readonly='0'/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Path">
+                                <field name="user_validation_ids" editable="bottom">
+                                    <tree>
+                                        <field name="sequence" widget="handle"/>
+                                        <field name='user_id'/>
+                                    </tree>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+
+        <record id="workflow_action" model="ir.actions.act_window">
+            <field name="name">Workflow</field>
+            <field name="res_model">workflow.workflow</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form,diagram</field>
+        </record>
+
+
+        <menuitem name="Workflow Editor" 
+            id="workflow_menu" 
+            action="workflow_action" 
+            parent="base.menu_administration" 
+            sequence="-1"/>
+
+    </data>
+</odoo>
