@@ -62,12 +62,10 @@ class CustomDataSet(main.DataSet):
         if 'workflow.model' in parents: 
             workflow = request.env['workflow.workflow'].search([('model_id','=',model)])
             if workflow:
-                print('#### CALLING CUSTOM METHODE ')
                 action = request.env[model].trigger_transition(model, method, args, {})
             else:
                 print('#### cannot find the associated workflow object')
         else:
-            print('#### CALLING ORIGINAL METHODE ')
             action = self._call_kw(model, method, args, {})
 
         if isinstance(action, dict) and action.get('type') != '':

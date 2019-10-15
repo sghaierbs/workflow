@@ -118,31 +118,20 @@ class ValidationStack(models.Model):
             return res
 
     def trigger_transition(self, state, action_name):
-        # print('###### validation states for model ',self.validation_state_ids)
-        validation_state = self.validation_state_ids.search([('technical_name','=',state)],limit=1)
-        # print("VALIDATION STATE ",validation_state.name)
-        transition_id = validation_state.validation_transition_ids.search([('action_name','=',action_name)],limit=1)
-        # print("TRANSITION ID ",transition_id.name)
-        validation_element = transition_id.validation_element_ids
-        # for element in validation_element:
-        #     print('##### VALIDATION ELEMENT NAME ',element.user_id.name)
         
+        validation_state = self.validation_state_ids.search([('technical_name','=',state)],limit=1)
+        transition_id = validation_state.validation_transition_ids.search([('action_name','=',action_name)],limit=1)
+        validation_element = transition_id.validation_element_ids
         res = self.env['validation.element'].search([('validation_transition_id','=',transition_id.id)])
-        print("FOUND ELEMENT  ",res)
-        for item in res:
-            print("FOUND ELEMENT [%s]  DONE %s"%(item.id,item.done))
-
+        
         if all(validation_element.mapped('done')):
-            print('##### ALL element are done',validation_element)
             return True
         else:
             next_element_to_validate = False
             for rec in validation_element.sorted(key=lambda r: r.sequence):
-                print('###### FIRST ELEMENT ',rec.user_id.name)
                 if not rec.done:
                     next_element_to_validate = rec
                     break
-            print('###### THE NEXT ELEMENT IS ',next_element_to_validate.user_id.name)
             if next_element_to_validate and next_element_to_validate.user_id.id == self.env.user.id:
                 next_element_to_validate.done = True
                 model = self._context.get('model',False)
@@ -157,30 +146,13 @@ class ValidationStack(models.Model):
                             'note': 'Validate this document',
                             'user_id': rec.user_id.id,
                             'res_id': ids[0],
-                            'res_model_id': model.id,#self.env.ref('workflow.model_transition_manager').id,
+                            'res_model_id': model.id,
                         })
                         break
             else:
                 pass
                 raise Warning('you are not allowed to performe this action yet !')
-
-                # if rec.user_id.id == self.env.user.id:
-                #     print('##### Setting element to done CONTEXT',self._context) 
-                #     model = self._context.get('model',False)
-                #     model = self.env['ir.model'].search([('model','=',model)])
-                #     ids = self._context.get('ids',False)
-
-                #     self.env['mail.activity'].create({
-                #         'activity_type_id': 4, # To-Do
-                #         'note': 'Validation the current sale order',
-                #         'user_id': self.env.user.id,
-                #         'res_id': ids[0],
-                #         'res_model_id': model.id,#self.env.ref('workflow.model_transition_manager').id,
-                #     })
-                #     print('####### UPDATING THE PATH ')
-                #     rec.done = True
             if all(validation_element.mapped('done')):
-                print('##### Now All Element Are Done') 
                 return True
             else:
                 return False
@@ -247,7 +219,6 @@ class WorkflowModel(models.Model):
     _name = 'workflow.model'
 
 
-
     name = fields.Char('Name')
     # TO-DO delete the record and it's related objects when deleting 
     # the record that inherit from workflow.model
@@ -257,7 +228,6 @@ class WorkflowModel(models.Model):
     
     @api.multi
     def get_workflow_data(self):
-        print('##### RPC CALL ',len(self.transition_manager_id))
         '''
             return data for javascript widget.
         '''
@@ -277,6 +247,7 @@ class WorkflowModel(models.Model):
             raise ValidationError('No workflow configuration is associated to this model')
         return workflow_id
 
+
     @api.multi 
     def check_transition(self, method, args, kwargs):
         '''
@@ -292,8 +263,6 @@ class WorkflowModel(models.Model):
 
 
 
-
-
     @api.model
     def trigger_transition(self, model, method, args, kwargs):
         allowed = False
@@ -302,10 +271,8 @@ class WorkflowModel(models.Model):
             record = self.env[model].browse(ids)
             allowed = record.check_transition(method, args, kwargs)
             if allowed:
-                print('###### ALLOWED')
                 return call_kw(self.env[model], method, args, kwargs)
             else:
-                print('###### NOT ALLOWED YET')
                 return True    
         else:
             return call_kw(self.env[model], method, args, kwargs)
@@ -315,7 +282,6 @@ class WorkflowModel(models.Model):
     @api.model
     def create_transition_manager(self):
         workflow_id = self._get_workflow_config()
-        print('##### CREATING NEW RECORD ',self._name)
         
         vals = {
             'workflow_id':workflow_id.id,

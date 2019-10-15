@@ -10,19 +10,10 @@ odoo.define('workflow.path_widget', function(require) {
     var Qweb = core.qweb;
     var _t = core._t;
 
-    console.log('#### FILE LOADED')
-
 
     var PathWidget = Widget.extend({
 	    cssLibs: [],
 	    jsLibs: [],
-	    // events: {
-	    //     'keydown': '_onKeydown',
-	    // },
-	    // custom_events: {
-	    //     navigation_move: '_onNavigationMove',
-	    // },
-
 
 	    resetOnAnyFieldChange: true,
 
@@ -30,10 +21,6 @@ odoo.define('workflow.path_widget', function(require) {
 	    init: function (parent, name, record, options) {
 	        this._super(parent);
 	        options = options || {};
-            console.log('######## CALL TO INIT function parent ',parent)
-            console.log('######## CALL TO INIT function name ',name)
-            console.log('######## CALL TO INIT function record ',record)
-            console.log('######## CALL TO INIT function options ',options)
 
             // 'name' is the field name displayed by this widget
             this.name = name;
@@ -68,7 +55,6 @@ odoo.define('workflow.path_widget', function(require) {
 
 	    },
 	    willStart: function(){
-            console.log('##### CALL WILLSTART METHODE',this);
             var self = this;
             return $.when(
                 rpc.query({
@@ -76,7 +62,6 @@ odoo.define('workflow.path_widget', function(require) {
                     model: this.model,
                     method: 'get_workflow_data',
                 }).then(function(result){
-                    console.log('##### RESULTS ', result)
                     // self.validation_state_ids = result['validation_state_ids']
                     // console.log('#### VALIDATION STATE IDS ',self.validation_state_ids)
                     // self.validation_transition_ids =  self.validation_state_ids[0]['validation_transition_ids']
@@ -87,7 +72,6 @@ odoo.define('workflow.path_widget', function(require) {
             );
         },
 	    start: function(){
-	    	console.log('##### CALL TO START METHODE')
 	    	this._super(parent);
 		},
         /**

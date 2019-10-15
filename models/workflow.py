@@ -109,8 +109,6 @@ class odoo_workflow(models.Model):
                             'name': element.get('name'),
                             'type': element.get('type'),
                             'description':element.get('string')}))
-                    print('###### BUTTON TYPE %s  NAME %s   STRING %s'%(element.get('type'), element.get('name'),element.get('string')))
-                    # print('###### BUTTON TAG',etree.tostring(element, encoding="utf-8"))
             self.update({'action_ids': cmd})
 
 
@@ -131,12 +129,10 @@ class odoo_workflow(models.Model):
 
     @api.model
     def create(self, vals):
-        print('##### CREATE WORKFLOW ',vals)
         return super(odoo_workflow, self).create(vals)
 
     @api.multi
     def write(self, vals):
-        print('###### CALL TO write ',vals)
         return super(odoo_workflow, self).write(vals)
 
 
@@ -205,34 +201,8 @@ class WorkflowStates(models.Model):
 
     @api.multi
     def unlink(self):
-        print('##### deleting records from workflow.state')
         return super(WorkflowStates, self).unlink()
 
     @api.multi
     def write(self, vals):
-        print('###### STATE CALL TO write ',vals)
         return super(WorkflowStates, self).write(vals)
-
-
-# class SaleOrder(models.Model):
-#     _inherit = 'sale.order'
-
-#     @api.model
-#     def fields_view_get(self, view_id=None, view_type='form', toolbar=False, submenu=False):
-#         res = super(SaleOrder, self).fields_view_get(view_id=view_id, view_type=view_type, toolbar=toolbar, submenu=submenu)
-#         def _add_field_def_to_view(resource, field_name, field_node):
-#             resource['fields'].update(model_obj.fields_get(allfields=[field_name]))
-#             setup_modifiers(field_node, resource['fields'][field_name])
-#         if view_type == 'form':
-#             # Get Header Element
-#             header_el = arch.xpath("//form/header")
-#             header_el = header_el[0] if header_el else False
-#             # Create State Element If not Exists
-#             if header_el is not False:
-#                 state_el = etree.Element('field')
-#                 state_el.set('name', 'transition_manager_id')
-#                 state_el.set('widget', 'ValidationPath')
-#                 _add_field_def_to_view(res, 'state', state_el)
-#                 header_el.append(state_el)
-#         res['arch'] = etree.tostring(arch, encoding="utf-8")
-#         return res

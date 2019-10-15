@@ -38,10 +38,8 @@ odoo.define('workflow.widget', function(require) {
             this.validation_transition_ids = [];
             this.validation_element_ids = [];
             this.data = [];
-            console.log('##### CALL OF INIT');
         },
         willStart: function(){
-            console.log('##### CALL OF WILLSTART');
             var self = this;
             return $.when(
                 rpc.query({
@@ -50,9 +48,7 @@ odoo.define('workflow.widget', function(require) {
                     method: 'get_workflow_data',
                 }).then(function(result){
                     self.data = result;
-                    console.log('##### RESULTS ', result)
                     self.validation_state_ids = result['validation_state_ids']
-                    console.log('#### VALIDATION STATE IDS ',self.validation_state_ids)
                     if(self.validation_state_ids && self.validation_state_ids.length)
                         self.validation_transition_ids =  self.validation_state_ids[0]['validation_transition_ids']
                     if(self.validation_transition_ids && self.validation_transition_ids.length)
@@ -66,7 +62,6 @@ odoo.define('workflow.widget', function(require) {
          * @override
          */
         start: function () {
-            console.log('##### CALL OF START');
             this._super(parent);
             // this.data = ['sghaier','ben', 'selma'];
         },
@@ -79,9 +74,6 @@ odoo.define('workflow.widget', function(require) {
         },
 
         renderElement: function () {
-            console.log('##### renderElement Before sortBy',this.validation_element_ids)
-            // this.validation_element_ids = _.sortBy(this.validation_element_ids, function(o) { return o.sequence; })
-            console.log('##### renderElement After sortBy',this.validation_element_ids.reverse())
             var $el;
             if (this.template) {
                 $el = $(core.qweb.render(this.template, {widget: this}).trim());
@@ -116,7 +108,6 @@ odoo.define('workflow.widget', function(require) {
          * @returns {Deferred}
          */
         reset: function (record, ev, fieldChanged) {
-            console.log('###### FIELD CHANGED ',this.validation_element_ids)
             return this._super.apply(this, arguments);
         },
 
