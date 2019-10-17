@@ -15,7 +15,7 @@ _logger = logging.getLogger(__name__)
 
 class ValidationElement(models.Model):
     _name = 'validation.element'
-    _order = 'sequence asc'
+    _order = 'sequence desc'
     _description = '''
         This is a model that will hold the list of required approval by users
         and the state of each element in the path 
@@ -23,6 +23,7 @@ class ValidationElement(models.Model):
         - the original method won't be called unless the User 3 validate it
     '''
 
+    name = fields.Char(string='Name')
     user_id = fields.Many2one('res.users', string='User', required=True)
     sequence = fields.Integer(string='Sequence')
     done = fields.Boolean(string='Validated', default=False)
@@ -103,6 +104,8 @@ class ValidationStack(models.Model):
     _name ='transition.manager'
     _inherit = ['mail.thread', 'mail.activity.mixin']
 
+
+    name = fields.Char(string='Name ')
     done = fields.Boolean(string='Validated', default=False)
     workflow_id = fields.Many2one('workflow.workflow')
     validation_state_ids = fields.One2many('validation.state', 'transition_manager_id')    
@@ -118,17 +121,19 @@ class ValidationStack(models.Model):
             return res
 
     def trigger_transition(self, state, action_name):
-        
-        validation_state = self.validation_state_ids.search([('technical_name','=',state)],limit=1)
-        transition_id = validation_state.validation_transition_ids.search([('action_name','=',action_name)],limit=1)
+        validation_state = self.validation_state_ids.filtered(lambda r: r.technical_name == state)#search([('technical_name','=',state)])
+        transition_id = validation_state.validation_transition_ids.filtered(lambda r: r.action_name == action_name)#search([('action_name','=',action_name)])
         validation_element = transition_id.validation_element_ids
-        res = self.env['validation.element'].search([('validation_transition_id','=',transition_id.id)])
-        
+        for rec in validation_element:
+            print('FOUND VALIDATION ELEMENT ',rec.user_id.name)
+
+
         if all(validation_element.mapped('done')):
             return True
         else:
             next_element_to_validate = False
             for rec in validation_element.sorted(key=lambda r: r.sequence):
+                print('####ELEMENT TO VALIDATE ',rec.user_id.name)
                 if not rec.done:
                     next_element_to_validate = rec
                     break
@@ -139,16 +144,21 @@ class ValidationStack(models.Model):
                 ids = self._context.get('ids',False)
 
                 # check if there is still a next step and create an activity depending on the result
-                for rec in validation_element:
+                for rec in validation_element.sorted(key=lambda r: r.sequence):
+                    print('###### external loop ',rec.user_id.name)
                     if not rec.done:
+                        print('###### creating task ',rec.user_id.name)
                         self.env['mail.activity'].create({
                             'activity_type_id': 4, # To-Do
-                            'note': 'Validate this document',
+                            'note': 'This document require your validation',
+                            'summary':'Confirm Sale Order',
                             'user_id': rec.user_id.id,
                             'res_id': ids[0],
                             'res_model_id': model.id,
                         })
                         break
+                    else:
+                        print('###### not creating task')
             else:
                 pass
                 raise Warning('you are not allowed to performe this action yet !')
@@ -192,21 +202,22 @@ class ValidationStack(models.Model):
                         validation_element = []
                         for item in transition.user_validation_ids.sorted(key=lambda r: r.sequence):
                             validation_element.append((0, 0, {
+                                'name':rec.name,
                                 'sequence':item.sequence,
                                 'user_id': item.user_id.id,
-                                }))
+                            }))
                         transition_element.append((0, 0, {
                             'name': transition.name,
                             'action_name': transition.action_id.name,
                             'type': transition.action_id.type,
                             'validation_element_ids': validation_element,
-                            }))
+                        }))
                     cmd.append((0, 0, {
                         'name': state.name, 
                         'technical_name': state.technical_name,
                         'workflow_id': rec.workflow_id.id,
                         'validation_transition_ids':transition_element,
-                        }))
+                    }))
                 rec.update({'validation_state_ids':cmd})
 
     def create(self, vals):
@@ -270,6 +281,7 @@ class WorkflowModel(models.Model):
             ids = args[0] if isinstance(args[0], list) else []
             record = self.env[model].browse(ids)
             allowed = record.check_transition(method, args, kwargs)
+            print('##### ALLOWED TO CALL ACTION')
             if allowed:
                 return call_kw(self.env[model], method, args, kwargs)
             else:
@@ -280,12 +292,12 @@ class WorkflowModel(models.Model):
 
 
     @api.model
-    def create_transition_manager(self):
+    def create_transition_manager(self, name):
         workflow_id = self._get_workflow_config()
-        
+        print('SALE ORDER NAME ',self.name)
         vals = {
             'workflow_id':workflow_id.id,
-            'name':workflow_id.name
+            'name':name
         }
         record_id = self.env['transition.manager'].create(vals)
         return record_id
@@ -295,7 +307,8 @@ class WorkflowModel(models.Model):
 
     @api.model
     def create(self, vals):
-        vals['transition_manager_id'] = self.create_transition_manager().id
+        print('#### CALL TO CREATE VALS ',vals)
+        vals['transition_manager_id'] = self.create_transition_manager(vals['name']).id
         return super(WorkflowModel, self).create(vals)
 
 
@@ -332,6 +345,6 @@ class WorkflowModel(models.Model):
                 state_el.set('name', 'transition_manager_id')
                 state_el.set('widget', 'ValidationPath')
                 _add_field_def_to_view(res, 'transition_manager_id', state_el)
-                header_el.insert(len(header_el)-1,state_el)#append(state_el)
+                header_el.insert(len(header_el)-1,state_el)
         res['arch'] = etree.tostring(arch, encoding="utf-8")
         return res

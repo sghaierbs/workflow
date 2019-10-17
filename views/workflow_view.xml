@@ -109,6 +109,24 @@
             </field>
         </record>
 
+
+        <record id="user_validation_from_view" model="ir.ui.view">
+            <field name="name">user.validation.form</field>
+            <field name="model">user.validation</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group>
+                            <field name='user_id'/>
+                            <field name='sequence' readonly='1'/>
+                            <field name='validation_transition_id' invisible='1'/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+
         <record id="workflow_transition_from_view" model="ir.ui.view">
             <field name="name">workflow.transition.form</field>
             <field name="model">workflow.transition</field>
@@ -128,10 +146,11 @@
                         </group>
                         <notebook>
                             <page string="Path">
-                                <field name="user_validation_ids" editable="bottom">
+                                <field name="user_validation_ids" editable="bottom" context="{'default_validation_transition_id':id}">
                                     <tree>
                                         <field name="sequence" widget="handle"/>
                                         <field name='user_id'/>
+                                        <field name='validation_transition_id' invisible='1'/>
                                     </tree>
                                 </field>
                             </page>

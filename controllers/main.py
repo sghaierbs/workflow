@@ -62,9 +62,8 @@ class CustomDataSet(main.DataSet):
         if 'workflow.model' in parents: 
             workflow = request.env['workflow.workflow'].search([('model_id','=',model)])
             if workflow:
+                print('#### TRIGGER TRANSITION')
                 action = request.env[model].trigger_transition(model, method, args, {})
-            else:
-                print('#### cannot find the associated workflow object')
         else:
             action = self._call_kw(model, method, args, {})
 
