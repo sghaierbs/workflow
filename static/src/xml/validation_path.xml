@@ -5,7 +5,12 @@
             <t t-if='widget.validation_element_ids'>
             	<t t-foreach="widget.validation_element_ids" t-as="item">
             		<button type="button"  disabled="disabled" t-attf-class='btn btn-sm o_arrow_button btn-primary disabled #{item.done ? "done-state" : "pending-state"}'>
-            			<t t-esc='item.user_id.name'/>
+                        <t t-if="item.type == 'user'"> 
+                            <t t-esc='item.user_id.name'/>
+                        </t> 
+                        <t t-if="item.type == 'group'"> 
+                            <t t-esc='item.group_id.name'/>
+                        </t>    
             		</button> 
                 </t>
             </t>

@@ -117,12 +117,27 @@
                 <form>
                     <sheet>
                         <group>
-                            <field name='user_id'/>
-                            <field name='sequence' readonly='1'/>
+                            <field name='name' invisible='1'/>
+                            <field name='type'/>
+                            <field name='group_id' attrs="{'invisible': [('type', 'in', ['user',False])],'required': [('type', '=', 'group')]}"/>
+                            <field name='user_id' attrs="{'invisible': [('type', 'in', ['group',False])],'required': [('type', '=', 'user')]}"/>
+                            <field name='sequence' />
                             <field name='validation_transition_id' invisible='1'/>
                         </group>
                     </sheet>
                 </form>
+            </field>
+        </record>
+
+        <record id="user_validation_tree" model="ir.ui.view">
+            <field name="name">user.validation.tree</field>
+            <field name="model">user.validation</field>
+            <field name="arch" type="xml">
+                <tree string="User Validation">
+                    <field name='sequence' widget='handle'/>
+                    <field name="name"/>
+                    <field name="type"/>
+                </tree>
             </field>
         </record>
 
@@ -149,7 +164,8 @@
                                 <field name="user_validation_ids" editable="bottom" context="{'default_validation_transition_id':id}">
                                     <tree>
                                         <field name="sequence" widget="handle"/>
-                                        <field name='user_id'/>
+                                        <field name='name'/>
+                                        <field name='type'/>
                                         <field name='validation_transition_id' invisible='1'/>
                                     </tree>
                                 </field>

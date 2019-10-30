@@ -60,7 +60,7 @@ MODEL_DOMAIN = """[
     ]"""
 
 
-class odoo_workflow(models.Model):
+class OdooWorkflow(models.Model):
     _name = 'workflow.workflow'
     _description = 'Odoo Workflow'
 
@@ -129,11 +129,11 @@ class odoo_workflow(models.Model):
 
     @api.model
     def create(self, vals):
-        return super(odoo_workflow, self).create(vals)
+        return super(OdooWorkflow, self).create(vals)
 
     @api.multi
     def write(self, vals):
-        return super(odoo_workflow, self).write(vals)
+        return super(OdooWorkflow, self).write(vals)
 
 
 class WorkflowActions(models.Model):
@@ -178,9 +178,19 @@ class WorkflowValidation(models.Model):
     _name = 'user.validation'
     _order = 'sequence asc'
 
-    sequence = fields.Integer(string='Sequence', default=10)
+    sequence = fields.Integer(string='Sequence', default=1)
+    name = fields.Char(string='Name')
     validation_transition_id = fields.Many2one('workflow.transition')
-    user_id = fields.Many2one('res.users', string='User', required=True)
+    type = fields.Selection([('group','By Role'),('user','By User')], default='group', required=True)
+    user_id = fields.Many2one('res.users', string='User')
+    group_id = fields.Many2one('res.groups', string='Role')
+
+
+    @api.onchange('type','group_id','user_id')
+    def _onchange_name(self):
+        name = 'Role %s'%self.group_id.name if self.type == 'group' else 'User %s'%self.user_id.name
+        self.update({'name':name})
+
 
 
 class WorkflowStates(models.Model):

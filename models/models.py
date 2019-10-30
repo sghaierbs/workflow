@@ -24,8 +24,10 @@ class ValidationElement(models.Model):
     '''
 
     name = fields.Char(string='Name')
-    user_id = fields.Many2one('res.users', string='User', required=True)
+    user_id = fields.Many2one('res.users', string='User')
+    group_id = fields.Many2one('res.groups', string='Role')
     sequence = fields.Integer(string='Sequence')
+    type = fields.Selection([('group','By Role'),('user','By User')], default='group', required=True)
     done = fields.Boolean(string='Validated', default=False)
     validation_transition_id = fields.Many2one('validation.transition', ondelete='cascade')
 
@@ -34,7 +36,20 @@ class ValidationElement(models.Model):
     def get_json_data(self):
         result = []
         for rec in self:
-            result.append({'id':rec.id,'user_id':{'id':rec.user_id.id,'name':rec.user_id.name},'done':rec.done,'sequence':rec.sequence})
+            result.append({
+                'id':rec.id,
+                'user_id':{
+                    'id':rec.user_id.id,
+                    'name':rec.user_id.name
+                },
+                'group_id':{
+                    'id':rec.group_id.id,
+                    'name': rec.group_id.full_name,
+                },
+                'done':rec.done,
+                'sequence':rec.sequence,
+                'type':rec.type,
+            })
         return result
 
 
@@ -124,43 +139,59 @@ class ValidationStack(models.Model):
         validation_state = self.validation_state_ids.filtered(lambda r: r.technical_name == state)#search([('technical_name','=',state)])
         transition_id = validation_state.validation_transition_ids.filtered(lambda r: r.action_name == action_name)#search([('action_name','=',action_name)])
         validation_element = transition_id.validation_element_ids
-        for rec in validation_element:
-            print('FOUND VALIDATION ELEMENT ',rec.user_id.name)
-
-
+        
         if all(validation_element.mapped('done')):
             return True
         else:
             next_element_to_validate = False
             for rec in validation_element.sorted(key=lambda r: r.sequence):
-                print('####ELEMENT TO VALIDATE ',rec.user_id.name)
                 if not rec.done:
                     next_element_to_validate = rec
                     break
-            if next_element_to_validate and next_element_to_validate.user_id.id == self.env.user.id:
-                next_element_to_validate.done = True
-                model = self._context.get('model',False)
-                model = self.env['ir.model'].search([('model','=',model)])
-                ids = self._context.get('ids',False)
+            if next_element_to_validate:
+                print('#### HAS NEXT Element', next_element_to_validate.name)
+                allowed = False
+                # check if current user belongs to required group for this action
+                if next_element_to_validate.type == 'group' and self.env.user.id in next_element_to_validate.group_id.users.ids:
+                    print('#### GROUP VALIDATION ',next_element_to_validate.group_id.name)
+                    allowed = True
+                elif next_element_to_validate.type == 'user' and next_element_to_validate.user_id.id == self.env.user.id:
+                    print('#### USER VALIDATION ',next_element_to_validate.user_id.name)
+                    allowed = True
 
-                # check if there is still a next step and create an activity depending on the result
-                for rec in validation_element.sorted(key=lambda r: r.sequence):
-                    print('###### external loop ',rec.user_id.name)
-                    if not rec.done:
-                        print('###### creating task ',rec.user_id.name)
-                        self.env['mail.activity'].create({
-                            'activity_type_id': 4, # To-Do
-                            'note': 'This document require your validation',
-                            'summary':'Confirm Sale Order',
-                            'user_id': rec.user_id.id,
-                            'res_id': ids[0],
-                            'res_model_id': model.id,
-                        })
-                        break
-                    else:
-                        print('###### not creating task')
+                if allowed:
+                    next_element_to_validate.done = True
+                    model = self._context.get('model',False)
+                    model = self.env['ir.model'].search([('model','=',model)])
+                    ids = self._context.get('ids',False)
+
+                    # check if there is still a next step and create an activity depending on the result
+                    for rec in validation_element.sorted(key=lambda r: r.sequence):
+                        if not rec.done and rec.type == 'user':
+                            self.env['mail.activity'].create({
+                                'activity_type_id': 4, # To-Do
+                                'note': 'This document require your validation',
+                                'summary':'Confirm Sale Order',
+                                'user_id': rec.user_id.id,
+                                'res_id': ids[0],
+                                'res_model_id': model.id,
+                            })
+                            break
+                        elif rec.done and rec.type == 'group':
+                            for user in rec.group_id.users:
+                                self.env['mail.activity'].create({
+                                    'activity_type_id': 4, # To-Do
+                                    'note': 'This document require your validation',
+                                    'summary':'Confirm Sale Order',
+                                    'user_id': user.id,
+                                    'res_id': ids[0],
+                                    'res_model_id': model.id,
+                                })
+                        else:
+                            pass
+                else:
+                    raise Warning('you are not allowed to performe this action yet !')    
             else:
-                pass
                 raise Warning('you are not allowed to performe this action yet !')
             if all(validation_element.mapped('done')):
                 return True
@@ -205,6 +236,8 @@ class ValidationStack(models.Model):
                                 'name':rec.name,
                                 'sequence':item.sequence,
                                 'user_id': item.user_id.id,
+                                'group_id': item.group_id.id,
+                                'type': item.type,
                             }))
                         transition_element.append((0, 0, {
                             'name': transition.name,
@@ -281,7 +314,6 @@ class WorkflowModel(models.Model):
             ids = args[0] if isinstance(args[0], list) else []
             record = self.env[model].browse(ids)
             allowed = record.check_transition(method, args, kwargs)
-            print('##### ALLOWED TO CALL ACTION')
             if allowed:
                 return call_kw(self.env[model], method, args, kwargs)
             else:
@@ -294,7 +326,6 @@ class WorkflowModel(models.Model):
     @api.model
     def create_transition_manager(self, name):
         workflow_id = self._get_workflow_config()
-        print('SALE ORDER NAME ',self.name)
         vals = {
             'workflow_id':workflow_id.id,
             'name':name
@@ -307,19 +338,10 @@ class WorkflowModel(models.Model):
 
     @api.model
     def create(self, vals):
-        print('#### CALL TO CREATE VALS ',vals)
-        vals['transition_manager_id'] = self.create_transition_manager(vals['name']).id
+        vals['transition_manager_id'] = self.create_transition_manager('name').id
         return super(WorkflowModel, self).create(vals)
 
 
-    @api.model
-    def fields_view_get(self, view_id=None, view_type='form', toolbar=False, submenu=False):
-        res = super(WorkflowModel, self).fields_view_get(view_id=view_id, view_type=view_type, toolbar=toolbar, submenu=submenu)
-        if view_type in ['tree', 'form']:
-            self._get_workflow_config()
-        return res
-
-    
 
 
     @api.model

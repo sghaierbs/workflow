@@ -53,7 +53,6 @@ odoo.define('workflow.widget', function(require) {
                         self.validation_transition_ids =  self.validation_state_ids[0]['validation_transition_ids']
                     if(self.validation_transition_ids && self.validation_transition_ids.length)
                         self.validation_element_ids = self.validation_transition_ids[0]['validation_element_ids']
-                    // console.log('### Result of call back',self.validation_element_ids)
                 })
             );
         },
