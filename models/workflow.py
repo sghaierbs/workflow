@@ -112,20 +112,7 @@ class OdooWorkflow(models.Model):
             self.update({'action_ids': cmd})
 
 
-    def get_out_transitions(self, state):
-        '''
-            from a given state (workflow.state) get all the possible transition to other states (workflow.state)
-        '''
-        pass 
 
-
-
-    def get_required_validations(self):
-        '''
-            get the list of users that needs to validate the document 
-            in order to move it from one state to another.
-        '''
-        pass
 
     @api.model
     def create(self, vals):
@@ -153,7 +140,7 @@ class WorkflowTransition(models.Model):
 
 
     name = fields.Char('Name')
-    action_id = fields.Many2one('workflow.action', string='Action', ondelete='cascade')
+    action_id = fields.Many2one('workflow.action', string='Action', ondelete='cascade', )
     state_from = fields.Many2one('workflow.state', string='State from')
     state_to = fields.Many2one('workflow.state', string='State to')
     workflow_id = fields.Many2one('workflow.workflow', string='Workflow')

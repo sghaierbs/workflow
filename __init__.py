@@ -34,8 +34,10 @@ regex = r"^_unknown$|odoo\.workflo.+|res\..+|ir\..+" + \
         "|bus\..+|base\..+|base\_.+|^base$"
 
 
+REMOVE_WORKFLOW_PARENT = False
+
 def load_modules_patched(db, force_demo=False, status=None, update_module=False):
-    print('###### CUSTOM LOAD_MODULES')
+    
     initialize_sys_path()
 
     force = []
@@ -180,7 +182,7 @@ def load_modules_patched(db, force_demo=False, status=None, update_module=False)
             # removed (and removed the references from ir_model_data).
             cr.execute("SELECT name, id FROM ir_module_module WHERE state=%s", ('to remove',))
             modules_to_remove = dict(cr.fetchall())
-            print('######### CUSTOM MODULES TO REMOVE ',modules_to_remove)
+
             if modules_to_remove:
                 env = api.Environment(cr, SUPERUSER_ID, {})
                 pkgs = reversed([p for p in graph if p.name in modules_to_remove])
@@ -243,7 +245,6 @@ def load_modules_patched(db, force_demo=False, status=None, update_module=False)
 
   
 
-print('####### MONKY PATCHED load_modules function',modules.load_modules)
 modules.load_modules = load_modules_patched
 
 
@@ -265,6 +266,61 @@ def update_workflow(self):
         'type': 'ir.actions.client',
         'tag': 'reload',
     }
+
+def remove_workflow_manager_from_model(cr, model):
+    """
+    This method inherits new workflow engine
+    if assigned for current model.
+
+    :param cr: Database cursor
+    :param model: Current model instance
+    :return: List of inherited models
+    """
+
+    # Variables
+    model_name = model._name
+    is_transient = model._transient
+    is_abstract = model._abstract
+    parents = model._inherit
+    parents = [parents] if isinstance(parents, str) else (parents or [])
+    if isinstance(model_name, str):
+        # Check model
+        if not re.match(regex, model_name) and not is_transient and not is_abstract:
+            # Validate that workflow table created in database
+            sql = """SELECT EXISTS (
+                     SELECT 1 FROM information_schema.tables 
+                     WHERE table_schema = 'public' 
+                     AND table_name = 'workflow_workflow');
+                  """
+            cr.execute(sql)
+            res = cr.dictfetchall()
+            res = res and res[0] or {}
+            if res.get('exists', False):
+                # Check for model's workflow
+                sql = """SELECT * FROM workflow_workflow wkf, ir_model im 
+                         WHERE wkf.model_id = im.id 
+                         AND im.model = '%s';""" % model_name
+                cr.execute(sql)
+                for rec in cr.dictfetchall():
+                    # Apply inheritance
+                    
+                    
+                    if rec.get('model', False) == model_name:
+                        if 'workflow.model' not in parents and not REMOVE_WORKFLOW_PARENT:
+                            
+                            # if hasattr(model, 'state'):
+                            #     delattr(model, 'state')
+                            parents.insert(0, 'workflow.model')
+                            
+                        elif 'workflow.model' in parents and REMOVE_WORKFLOW_PARENT:
+                            
+                            parents.remove('workflow.model')
+                        if rec.get('mail_thread_add', False):
+                            if 'mail.thread' not in parents:
+                                parents.append('mail.thread')
+                            if 'ir.needaction_mixin' not in parents:
+                                parents.append('ir.needaction_mixin')
+    return parents
 
 def inherit_workflow_manager(cr, model):
     """
@@ -302,16 +358,18 @@ def inherit_workflow_manager(cr, model):
                 cr.execute(sql)
                 for rec in cr.dictfetchall():
                     # Apply inheritance
-                    print('##### model_name ',model_name)
+                    
+                    
                     if rec.get('model', False) == model_name:
-                        if 'workflow.model' not in parents:
+                        if 'workflow.model' not in parents and not REMOVE_WORKFLOW_PARENT:
                             
                             # if hasattr(model, 'state'):
                             #     delattr(model, 'state')
                             parents.insert(0, 'workflow.model')
-                            print('##### INSERTED PARENT ',parents)
-                        elif 'workflow.model' in parents:
-                            pass
+                            
+                        elif 'workflow.model' in parents and REMOVE_WORKFLOW_PARENT:
+                            
+                            parents.remove('workflow.model')
                         if rec.get('mail_thread_add', False):
                             if 'mail.thread' not in parents:
                                 parents.append('mail.thread')
@@ -367,6 +425,12 @@ def _build_model_new(cls, pool, cr):
 
     # determine all the classes the model should inherit from
     bases = LastOrderedSet([cls])
+
+    for parent in parents:
+        if parent == 'workflow.model' and parent not in pool:
+            parents.remove(parent)
+            break
+
     for parent in parents:
         if parent not in pool:
             raise TypeError("Model %r inherits from non-existing model %r." % (name, parent))
